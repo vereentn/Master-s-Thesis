@@ -1,0 +1,1686 @@
+---
+title: "help"
+author: "Timara Vereen"
+date: "2025-04-29"
+output: html_document
+---
+
+```{r}
+data <- Master_s_data_results_4_1_25
+
+library(ggplot2)
+library(ggsignif)
+data_d <- subset(data, Room == "D")
+data_u <- subset(data, Room == "U")
+
+data_n <-subset(data, Population == "Northern California")
+
+data_s <- subset(data, Population == "Southern California")
+
+data$horizontal_dist_cm <- data$horizontal_dist * 0.635
+data$vertical_dist_gross_cm <- data$vertical_dist_gross * 0.635
+data$total_dist_cm <- data$total_dist * 0.635
+```
+
+```{r}
+sum(data$total_dist_cm == 0)
+sum(data$horizontal_dist_cm == 0)
+sum(data$vertical_dist_gross_cm == 0)
+
+```
+
+```{r}
+#total distance (u)
+model_total<- glmmTMB(
+  total_dist_cm ~ Population * Engorgement + (1|Tick_ID) + (1|Trial),
+  family = tweedie(link = "log"),
+  data = data_u
+)
+
+summary(model_total)
+
+```
+```{r}
+#horizontal distance (u)
+model_hor <- glmmTMB(
+  horizontal_dist_cm ~ Population * Engorgement + (1|Tick_ID) + (1|Trial),
+  family = tweedie(link = "log"),
+  data = data_u
+)
+
+summary(model_hor)
+
+```
+
+```{r}
+#note: this simple model didn't creaate weird and extreme values for stand error compared to the interactive pop * engorg model, so went witht his one instead
+
+model_vert <- glmmTMB(
+  vertical_dist_gross_cm ~ Population + Engorgement + (1|Tick_ID) + (1|Trial),
+  family = tweedie(link = "log"),
+  data = data_u
+)
+
+summary(model_vert)
+```
+
+```{r}
+##percent activity
+#best fit for the dat compared to the pop * engorge model
+model_per_a <- glmmTMB(percent_activity ~ Population + Engorgement + (1|Trial) + (1|Tick_ID), 
+                   ziformula = ~1,  # Zero-inflated part of the model
+                   data = data_u, family = nbinom2)
+summary(model_per_a)
+#aic: 2032.327
+
+```
+
+
+
+#graphs starting with 17C room (U)
+```{r}
+library(ggplot2)
+library(ggsignif)
+data_u$Pop_Engorgement <- paste(data_u$Population, data_u$Engorgement, sep = "\n")
+
+ggplot(data_u, aes(x = as.factor(Room), y = total_dist_cm, fill = Population)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  #facet_wrap(~Room)+
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +  # Adds mean points
+  labs(
+    title = "",
+    x = "Room",
+    y = "Total Distance (cm)",
+    fill = "Population") +
+  theme_minimal()+ 
+  geom_signif(
+    comparisons = list(c("U", "U")),
+    annotations = "p = 0.032*",  # Display p-value
+    y_position = max(data$total_dist_cm) * 0.8,  # Position the bracket and p-value above the data
+    tip_length = 0.08,  # Add a small tip length for the bracket
+    textsize = 4 # Adjust text size for p-value+
+    # Adjust text size for p-value
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Northern California" = "#90CAF9",  # Soft Blue
+      "Southern California" = "#B39DDB"   # Light Purple
+    ))
+
+
+ggplot(data_u, aes(x = Pop_Engorgement, y = total_dist_cm, fill = as.factor(Engorgement))) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black") +
+  labs(
+    title = "",
+    x = "Population and Engorgement",
+    y = "Total Distance (cm)",
+    fill = "Engorgement Level"
+  ) +
+  scale_fill_manual(
+    values = c("1" = "#a6cee3", "2" = "#1f78b4", "3" = "#b2df8a"),
+    labels = c("1" = "Unfed", "2" = "Partially Engorged", "3" = "Fully Engorged")
+  ) +
+  theme_minimal() +
+  geom_signif(
+    comparisons = list(
+      c("Northern California\n1", "Southern California\n1"),
+      c("Southern California\n1", "Southern California\n3")
+    ),
+    annotations = c("p=0.048", "p=0.020"),
+    y_position = c(25,35),
+    tip_length = 0.02,
+    textsize = 3.5,
+    map_signif_level = FALSE
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 16),
+    axis.title = element_text(face = "bold", size = 14),
+    axis.text = element_text(size = 10),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.title = element_text(face = "bold"),
+    legend.position = "right"
+  )
+```
+
+```{r}
+
+#horizontal distance
+ggplot(data_u, aes(x = as.factor(Room), y = horizontal_dist_cm, fill = Population)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  #facet_wrap(~Room)+
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +  # Adds mean points
+  labs(
+    title = "",
+    x = "Room",
+    y = "Horizontal Distance (cm)",
+    fill = "Population") +
+  theme_minimal()+ 
+  geom_signif(
+    comparisons = list(c("U", "U")),
+    annotations = "p = 0.004*",  # Display p-value
+    y_position = max(data$total_dist_cm) * 0.8,  # Position the bracket and p-value above the data
+    tip_length = 0.08,  # Add a small tip length for the bracket
+    textsize = 4 # Adjust text size for p-value+
+    # Adjust text size for p-value
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Northern California" = "#90CAF9",  # Soft Blue
+      "Southern California" = "#B39DDB"   # Light Purple
+    ))
+
+ggplot(data_u, aes(x = Pop_Engorgement, y = horizontal_dist_cm, fill = as.factor(Engorgement))) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black") +
+  labs(
+    title = "",
+    x = "Population",
+    y = "Horizontal Distance (cm)",
+    fill = "Engorgement Level"
+  ) +
+  scale_fill_manual(
+    values = c("1" = "#a6cee3", "2" = "#1f78b4", "3" = "#b2df8a"),
+    labels = c("1" = "Unfed", "2" = "Partially Engorged", "3" = "Fully Engorged")
+  ) +
+  geom_signif(
+    comparisons = list(
+      c("Northern California\n1", "Southern California\n1"),
+      c("Southern California\n1", "Southern California\n3")
+    ),
+    annotations = c("p=0.048", "p=0.028"),
+    y_position = c(25, 30),
+    tip_length = 0.02,
+    textsize = 3.5,
+    map_signif_level = FALSE
+  ) +
+  # Add population labels below x-axis
+  annotate("text", x = 2, y = -5, label = "Northern California", size = 4.5, fontface = "bold") +
+  annotate("text", x = 5, y = -5, label = "Southern California", size = 4.5, fontface = "bold") +
+  # Final theme settings
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 16),
+    axis.title = element_text(face = "bold", size = 14),
+    axis.text = element_text(size = 10),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.title = element_text(face = "bold"),
+    legend.position = "right",
+    plot.margin = margin(20, 10, 40, 10),  # add bottom space for text
+    plot.caption = element_text(hjust = 0)
+  )
+
+```
+
+
+
+#vertical distance
+```{r}
+ggplot(data_u, aes(x = as.factor(Room), y = vertical_dist_gross_cm, fill = Population)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  #facet_wrap(~Room)+
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +  # Adds mean points
+  labs(
+    title = "",
+    x = "Room",
+    y = "Gross Vertical Distance (cm)",
+    fill = "Population") +
+  theme_minimal()+ 
+  geom_signif(
+    comparisons = list(c("U", "U")),
+    annotations = "p = 0.332",  # Display p-value
+    y_position = max(data$vertical_dist_gross_cm) * 0.8,  # Position the bracket and p-value above the data
+    tip_length = 0.08,  # Add a small tip length for the bracket
+    textsize = 4 # Adjust text size for p-value+
+    # Adjust text size for p-value
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Northern California" = "#90CAF9",  # Soft Blue
+      "Southern California" = "#B39DDB"   # Light Purple
+    ))
+
+
+ggplot(data_u, aes(x = Pop_Engorgement, y = vertical_dist_gross_cm, fill = as.factor(Engorgement))) +
+    geom_boxplot(outlier.shape = NA, width = 0.6) + coord_cartesian(ylim = c(0, 4))+
+    stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black") +
+    labs(
+        title = "",
+        x = "Population",
+        y = "Gross Vertical Distance (cm)",
+        fill = "Engorgement Level"
+    ) +
+    scale_fill_manual(
+        values = c("1" = "#a6cee3", "2" = "#1f78b4", "3" = "#b2df8a"),
+        labels = c("1" = "Unfed", "2" = "Partially Engorged", "3" = "Fully Engorged")
+    ) +
+    geom_signif(
+        comparisons = list(
+            c("Northern California\n1", "Northern California\n2")  # Engorgement 1 vs 2, same population
+        ),
+        annotations = c("p = 0.028*"),
+        y_position = c(max(data_u$vertical_dist_gross_cm, na.rm = TRUE) * 0.3),
+        tip_length = 0.01,
+        textsize = 3.5,
+        map_signif_level = FALSE
+    ) +
+    annotate("text", x = 2, y = -5, label = "Northern California", size = 4.5, fontface = "bold") +
+    annotate("text", x = 5, y = -5, label = "Southern California", size = 4.5, fontface = "bold") +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(face = "bold", hjust = 0.5, size = 16),
+        axis.title = element_text(face = "bold", size = 14),
+        axis.text = element_text(size = 10),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.title = element_text(face = "bold"),
+        legend.position = "right",
+        plot.margin = margin(20, 10, 40, 10),
+        plot.caption = element_text(hjust = 0)
+    )
+
+```
+
+```{r}
+#percent activity
+
+ggplot(data_u, aes(x = as.factor(Room), y = percent_activity, fill = Population)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  #facet_wrap(~Room)+
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +  # Adds mean points
+  labs(
+    title = "",
+    x = "Room",
+    y = "Percent Activity (%)",
+    fill = "Population") +
+  theme_minimal()+ 
+  geom_signif(
+    comparisons = list(c("U", "U")),
+    annotations = "p = 0.333",  # Display p-value
+    y_position = max(data$percent_activity) * 1,  # Position the bracket and p-value above the data
+    tip_length = 0.08,  # Add a small tip length for the bracket
+    textsize = 4 # Adjust text size for p-value+
+    # Adjust text size for p-value
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Northern California" = "#90CAF9",  # Soft Blue
+      "Southern California" = "#B39DDB"   # Light Purple
+    ))
+
+
+ggplot(data_u, aes(x = as.factor(Population), y = percent_activity, fill = as.factor(Engorgement))) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  coord_cartesian(ylim = c(0, 115))+
+  #facet_wrap(~Room)+
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +  # Adds mean points
+  labs(
+    title = "",
+    x = "Population",
+    y = "Percent activity of tick movement (%)",
+    fill = "Engorgement Level"
+  ) +
+  scale_fill_manual(
+    values = c("1" = "#a6cee3", "2" = "#1f78b4", "3" = "#b2df8a"),  # or any colors you want
+    labels = c("1" = "Unfed", "2" = "Partially Engorged", "3" = "Fully Engorged")
+  ) +
+  theme_minimal() +
+  geom_signif(
+    annotations = "p = 0.886",
+    y_position = max(data$percent_activity) * 1.1,
+    xmin = 1 + 0.25, xmax = 2 + 0.25,  # nudged right for Engorgement 3
+    tip_length = 0.01,
+    textsize = 4
+  ) +
+  geom_signif(
+    annotations = "p = 0.125",
+    y_position = max(data$percent_activity) * 1.0,
+    xmin = 0.5 + 0.5, xmax = 2 + 0.01,  # nudged right for Engorgement 2
+    tip_length = 0.03,
+    textsize = 4
+  ) +
+  scale_x_discrete(labels = c("sf" = "Northern California", "sc" = "Southern California")) +
+  #scale_fill_brewer(palette = "Set2") +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 16),
+    axis.title = element_text(face = "bold", size = 14),
+    axis.text = element_text(size = 12),
+    axis.text.x = element_text(angle = 0, hjust = 0.5), # changes angle and lateral (left/right) on x title
+    legend.title = element_text(face = "bold"),
+    legend.position = "right"
+  )
+
+```
+
+#making the panels
+```{r}
+install.packages("patchwork")
+library(patchwork)
+
+p1 <- ggplot(data_u, aes(x = as.factor(Room), y = total_dist_cm, fill = Population)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  #facet_wrap(~Room)+
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +  # Adds mean points
+  labs(
+    title = "",
+    x = "Room",
+    y = "Total Distance (cm)",
+    fill = "Population") +
+  theme_minimal()+ 
+  geom_signif(
+    comparisons = list(c("U", "U")),
+    annotations = "p = 0.032*",  # Display p-value
+    y_position = max(data$total_dist_cm) * 0.8,  # Position the bracket and p-value above the data
+    tip_length = 0.08,  # Add a small tip length for the bracket
+    textsize = 4 # Adjust text size for p-value+
+    # Adjust text size for p-value
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Northern California" = "#90CAF9",  # Soft Blue
+      "Southern California" = "#B39DDB"   # Light Purple
+    ))
+
+
+p2 <- ggplot(data_u, aes(x = Pop_Engorgement, y = total_dist_cm, fill = as.factor(Engorgement))) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black") +
+  labs(
+    title = "",
+    x = "Population and Engorgement",
+    y = "Total Distance (cm)",
+    fill = "Engorgement Level"
+  ) +
+  scale_fill_manual(
+    values = c("1" = "#a6cee3", "2" = "#1f78b4", "3" = "#b2df8a"),
+    labels = c("1" = "Unfed", "2" = "Partially Engorged", "3" = "Fully Engorged")
+  ) +
+  theme_minimal() +
+  geom_signif(
+    comparisons = list(
+      c("Northern California\n1", "Southern California\n1"),
+      c("Southern California\n1", "Southern California\n3")
+    ),
+    annotations = c("p=0.048", "p=0.020"),
+    y_position = c(25,35),
+    tip_length = 0.02,
+    textsize = 3.5,
+    map_signif_level = FALSE
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 16),
+    axis.title = element_text(face = "bold", size = 14),
+    axis.text = element_text(size = 10),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.title = element_text(face = "bold"),
+    legend.position = "right"
+  )
+
+#horizontal distance
+p3 <- ggplot(data_u, aes(x = as.factor(Room), y = horizontal_dist_cm, fill = Population)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  #facet_wrap(~Room)+
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +  # Adds mean points
+  labs(
+    title = "",
+    x = "Room",
+    y = "Horizontal Distance (cm)",
+    fill = "Population") +
+  theme_minimal()+ 
+  geom_signif(
+    comparisons = list(c("U", "U")),
+    annotations = "p = 0.004*",  # Display p-value
+    y_position = max(data$total_dist_cm) * 0.8,  # Position the bracket and p-value above the data
+    tip_length = 0.08,  # Add a small tip length for the bracket
+    textsize = 4 # Adjust text size for p-value+
+    # Adjust text size for p-value
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Northern California" = "#90CAF9",  # Soft Blue
+      "Southern California" = "#B39DDB"   # Light Purple
+    ))
+
+p4 <- ggplot(data_u, aes(x = Pop_Engorgement, y = horizontal_dist_cm, fill = as.factor(Engorgement))) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black") +
+  labs(
+    title = "",
+    x = "Population",
+    y = "Horizontal Distance (cm)",
+    fill = "Engorgement Level"
+  ) +
+  scale_fill_manual(
+    values = c("1" = "#a6cee3", "2" = "#1f78b4", "3" = "#b2df8a"),
+    labels = c("1" = "Unfed", "2" = "Partially Engorged", "3" = "Fully Engorged")
+  ) +
+  geom_signif(
+    comparisons = list(
+      c("Northern California\n1", "Southern California\n1"),
+      c("Southern California\n1", "Southern California\n3")
+    ),
+    annotations = c("p=0.048", "p=0.028"),
+    y_position = c(25, 30),
+    tip_length = 0.02,
+    textsize = 3.5,
+    map_signif_level = FALSE
+  ) +
+  # Add population labels below x-axis
+  annotate("text", x = 2, y = -5, label = "Northern California", size = 4.5, fontface = "bold") +
+  annotate("text", x = 5, y = -5, label = "Southern California", size = 4.5, fontface = "bold") +
+  # Final theme settings
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 16),
+    axis.title = element_text(face = "bold", size = 14),
+    axis.text = element_text(size = 10),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.title = element_text(face = "bold"),
+    legend.position = "right",
+    plot.margin = margin(20, 10, 40, 10),  # add bottom space for text
+    plot.caption = element_text(hjust = 0)
+  )
+
+#vertical distance
+p5 <- ggplot(data_u, aes(x = as.factor(Room), y = vertical_dist_gross_cm, fill = Population)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  #facet_wrap(~Room)+
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +  # Adds mean points
+  labs(
+    title = "",
+    x = "Room",
+    y = "Total Distance (cm)",
+    fill = "Population") +
+  theme_minimal()+ 
+  geom_signif(
+    comparisons = list(c("U", "U")),
+    annotations = "p = 0.997",  # Display p-value
+    y_position = max(data$vertical_dist_gross_cm) * 0.8,  # Position the bracket and p-value above the data
+    tip_length = 0.08,  # Add a small tip length for the bracket
+    textsize = 4 # Adjust text size for p-value+
+    # Adjust text size for p-value
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Northern California" = "#90CAF9",  # Soft Blue
+      "Southern California" = "#B39DDB"   # Light Purple
+    ))
+
+
+p6 <- ggplot(data_u, aes(x = Pop_Engorgement, y = vertical_dist_gross_cm, fill = as.factor(Engorgement))) +
+    geom_boxplot(outlier.shape = NA, width = 0.6) + coord_cartesian(ylim = c(0, 4))+
+    stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black") +
+    labs(
+        title = "",
+        x = "Population",
+        y = "Vertical Gross Distance (cm)",
+        fill = "Engorgement Level"
+    ) +
+    scale_fill_manual(
+        values = c("1" = "#a6cee3", "2" = "#1f78b4", "3" = "#b2df8a"),
+        labels = c("1" = "Unfed", "2" = "Partially Engorged", "3" = "Fully Engorged")
+    ) +
+    geom_signif(
+        comparisons = list(
+            c("Northern California\n1", "Northern California\n2")  # Engorgement 1 vs 2, same population
+        ),
+        annotations = c("p = 0.028*"),
+        y_position = c(max(data_u$vertical_dist_gross_cm, na.rm = TRUE) * 0.3),
+        tip_length = 0.01,
+        textsize = 3.5,
+        map_signif_level = FALSE
+    ) +
+    annotate("text", x = 2, y = -5, label = "Northern California", size = 4.5, fontface = "bold") +
+    annotate("text", x = 5, y = -5, label = "Southern California", size = 4.5, fontface = "bold") +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(face = "bold", hjust = 0.5, size = 16),
+        axis.title = element_text(face = "bold", size = 14),
+        axis.text = element_text(size = 10),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.title = element_text(face = "bold"),
+        legend.position = "right",
+        plot.margin = margin(20, 10, 40, 10),
+        plot.caption = element_text(hjust = 0)
+    )
+#percent activity
+
+p7 <- ggplot(data_u, aes(x = as.factor(Room), y = percent_activity, fill = Population)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  #facet_wrap(~Room)+
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +  # Adds mean points
+  labs(
+    title = "",
+    x = "Room",
+    y = "Percent Activity (%)",
+    fill = "Population") +
+  theme_minimal()+ 
+  geom_signif(
+    comparisons = list(c("U", "U")),
+    annotations = "p = 0.333",  # Display p-value
+    y_position = max(data$percent_activity) * 1,  # Position the bracket and p-value above the data
+    tip_length = 0.08,  # Add a small tip length for the bracket
+    textsize = 4 # Adjust text size for p-value+
+    # Adjust text size for p-value
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Northern California" = "#90CAF9",  # Soft Blue
+      "Southern California" = "#B39DDB"   # Light Purple
+    ))
+
+
+p8 <- ggplot(data, aes(x = as.factor(Population), y = percent_activity, fill = as.factor(Engorgement))) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  coord_cartesian(ylim = c(0, 115))+
+  #facet_wrap(~Room)+
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +  # Adds mean points
+  labs(
+    title = "",
+    x = "Population",
+    y = "Percent activity of tick movement (%)",
+    fill = "Engorgement Level"
+  ) +
+  scale_fill_manual(
+    values = c("1" = "#a6cee3", "2" = "#1f78b4", "3" = "#b2df8a"),  # or any colors you want
+    labels = c("1" = "Unfed", "2" = "Partially Engorged", "3" = "Fully Engorged")
+  ) +
+  theme_minimal() +
+  geom_signif(
+    annotations = "p = 0.886",
+    y_position = max(data$percent_activity) * 1.1,
+    xmin = 1 + 0.25, xmax = 2 + 0.25,  # nudged right for Engorgement 3
+    tip_length = 0.01,
+    textsize = 4
+  ) +
+  geom_signif(
+    annotations = "p = 0.125",
+    y_position = max(data$percent_activity) * 1.0,
+    xmin = 0.5 + 0.5, xmax = 2 + 0.01,  # nudged right for Engorgement 2
+    tip_length = 0.03,
+    textsize = 4
+  ) +
+  scale_x_discrete(labels = c("sf" = "Northern California", "sc" = "Southern California")) +
+  #scale_fill_brewer(palette = "Set2") +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 16),
+    axis.title = element_text(face = "bold", size = 14),
+    axis.text = element_text(size = 12),
+    axis.text.x = element_text(angle = 0, hjust = 0.5), # changes angle and lateral (left/right) on x title
+    legend.title = element_text(face = "bold"),
+    legend.position = "right"
+  )
+
+
+
+library(patchwork)
+
+# Remove legends from all but one plot:
+p1 <- p1 + theme(legend.position = "none")
+p2 <- p2 + theme(legend.position = "none")
+p3 <- p3 + theme(legend.position = "none")
+p4 <- p4 + theme(legend.position = "none")
+p5 <- p5 + theme(legend.position = "none")
+p6 <- p6 + theme(legend.position = "none")
+p7 <- p7 + theme(legend.position = "none")
+# Keep p8 with legend
+
+# Optional: shrink axis text slightly
+shrink_text <- theme(
+  axis.text = element_text(size = 10),
+  axis.title = element_text(size = 12)
+)
+p1 <- p1 + shrink_text
+p2 <- p2 + shrink_text
+# Apply to others as needed...
+
+# Layout in 4 rows x 2 columns with labels
+(p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8) +
+  plot_layout(ncol = 2, nrow = 4) +
+  plot_annotation(tag_levels = 'a', title = "Questing Behavior Metrics by Population & Engorgement")
+
+# Combine with labels
+(p1 + p2 + p3 + p4) /
+(p5 + p6 + p7 + p8) +
+  plot_annotation(tag_levels = 'a')  # Automatically labels (a) to (h)
+```
+
+```{r}
+# Shared theme
+common_theme <- theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(angle = 30, hjust = 1, size = 10),
+    axis.title = element_text(size = 12),
+    plot.title = element_text(face = "bold", size = 14),
+    legend.title = element_text(face = "bold"),
+    legend.text = element_text(size = 10)
+  )
+
+# Shared engorgement fill scale
+eng_fill <- scale_fill_manual(
+  values = c("1" = "#a6cee3", "2" = "#1f78b4", "3" = "#b2df8a"),
+  labels = c("1" = "Unfed", "2" = "Partially Engorged", "3" = "Fully Engorged")
+)
+
+# p1 – Total Distance by Room
+p1 <- ggplot(data_u, aes(x = Room, y = total_dist_cm, fill = Population)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +
+  geom_signif(
+    comparisons = list(c("U", "U")),
+    annotations = "p = 0.032*",
+    y_position = max(data_u$total_dist_cm, na.rm = TRUE) * 0.8,
+    tip_length = 0.03,
+    textsize = 4
+  ) +
+  labs(x = "Room", y = "Total Distance (cm)", fill = "Population") +
+  scale_fill_manual(values = c("Northern California" = "#90CAF9", "Southern California" = "#B39DDB")) +
+  common_theme +
+  theme(legend.position = "none")
+
+# p2 – Total Distance by Pop_Engorgement
+p2 <- ggplot(data_u, aes(x = Pop_Engorgement, y = total_dist_cm, fill = as.factor(Engorgement))) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black") +
+  geom_signif(
+    comparisons = list(
+      c("Northern California\n1", "Southern California\n1"),
+      c("Southern California\n1", "Southern California\n3")
+    ),
+    annotations = c("p = 0.048", "p = 0.020"),
+    y_position = c(25, 35),
+    tip_length = 0.02,
+    textsize = 3.5,
+    map_signif_level = FALSE
+  ) +
+  labs(x = "Population and Engorgement", y = "Total Distance (cm)", fill = "Engorgement Level") +
+  eng_fill +
+  common_theme +
+  theme(legend.position = "none")
+
+# p3 – Horizontal Distance by Room
+p3 <- ggplot(data_u, aes(x = Room, y = horizontal_dist_cm, fill = Population)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +
+  geom_signif(
+    comparisons = list(c("U", "U")),
+    annotations = "p = 0.004*",
+    y_position = max(data_u$horizontal_dist_cm, na.rm = TRUE) * 0.8,
+    tip_length = 0.03,
+    textsize = 4
+  ) +
+  labs(x = "Room", y = "Horizontal Distance (cm)", fill = "Population") +
+  scale_fill_manual(values = c("Northern California" = "#90CAF9", "Southern California" = "#B39DDB")) +
+  common_theme +
+  theme(legend.position = "none")
+
+# p4 – Horizontal Distance by Pop_Engorgement
+p4 <- ggplot(data_u, aes(x = Pop_Engorgement, y = horizontal_dist_cm, fill = as.factor(Engorgement))) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black") +
+  geom_signif(
+    comparisons = list(
+      c("Northern California\n1", "Southern California\n1"),
+      c("Southern California\n1", "Southern California\n3")
+    ),
+    annotations = c("p = 0.048", "p = 0.028"),
+    y_position = c(25, 30),
+    tip_length = 0.02,
+    textsize = 3.5,
+    map_signif_level = FALSE
+  ) +
+  labs(x = "Population", y = "Horizontal Distance (cm)", fill = "Engorgement Level") +
+  eng_fill +
+  common_theme +
+  theme(legend.position = "none")
+
+# p5 – Vertical Distance by Room
+p5 <- ggplot(data_u, aes(x = Room, y = vertical_dist_gross_cm, fill = Population)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +
+  geom_signif(
+    comparisons = list(c("U", "U")),
+    annotations = "p = 0.997",
+    y_position = max(data_u$vertical_dist_gross_cm, na.rm = TRUE) * 0.8,
+    tip_length = 0.03,
+    textsize = 4
+  ) +
+  labs(x = "Room", y = "Vertical Gross Distance (cm)", fill = "Population") +
+  scale_fill_manual(values = c("Northern California" = "#90CAF9", "Southern California" = "#B39DDB")) +
+  common_theme +
+  theme(legend.position = "none")
+
+# p6 – Vertical Distance by Pop_Engorgement
+p6 <- ggplot(data_u, aes(x = Pop_Engorgement, y = vertical_dist_gross_cm, fill = as.factor(Engorgement))) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  coord_cartesian(ylim = c(0, 4)) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black") +
+  geom_signif(
+    comparisons = list(c("Northern California\n1", "Northern California\n2")),
+    annotations = c("p = 0.028*"),
+    y_position = 1.25,
+    tip_length = 0.01,
+    textsize = 3.5,
+    map_signif_level = FALSE
+  ) +
+  labs(x = "Population", y = "Vertical Gross Distance (cm)", fill = "Engorgement Level") +
+  eng_fill +
+  common_theme +
+  theme(legend.position = "none")
+
+# p7 – Percent Activity by Room
+p7 <- ggplot(data_u, aes(x = Room, y = percent_activity, fill = Population)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +
+  geom_signif(
+    comparisons = list(c("U", "U")),
+    annotations = "p = 0.333",
+    y_position = max(data_u$percent_activity, na.rm = TRUE) * 0.9,
+    tip_length = 0.03,
+    textsize = 4
+  ) +
+  labs(x = "Room", y = "Percent Activity (%)", fill = "Population") +
+  scale_fill_manual(values = c("Northern California" = "#90CAF9", "Southern California" = "#B39DDB")) +
+  common_theme +
+  theme(legend.position = "none")
+
+# p8 – Percent Activity by Population and Engorgement (with legend)
+p8 <- ggplot(data, aes(x = Population, y = percent_activity, fill = as.factor(Engorgement))) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  coord_cartesian(ylim = c(0, 115)) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +
+  geom_signif(
+    annotations = "p = 0.886",
+    y_position = max(data$percent_activity, na.rm = TRUE) * 1.1,
+    xmin = 1.25, xmax = 2.25,
+    tip_length = 0.01,
+    textsize = 4
+  ) +
+  geom_signif(
+    annotations = "p = 0.125",
+    y_position = max(data$percent_activity, na.rm = TRUE) * 1.0,
+    xmin = 1.0, xmax = 2.01,
+    tip_length = 0.03,
+    textsize = 4
+  ) +
+  labs(x = "Population", y = "Percent Activity (%)", fill = "Engorgement Level") +
+  eng_fill +
+  common_theme
+
+
+(p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8) +
+  plot_layout(ncol = 2, guides = "collect") +
+  plot_annotation(tag_levels = "a") &
+  theme(legend.position = "bottom")
+
+
+ggsave("Questing_Panel.svg", width = 16, height = 18, dpi = 600)
+
+```
+# part 5
+# total distance by up and down
+```{r}
+#total distance (u)
+model_total_room<- glmmTMB(
+  total_dist_cm ~ Room * Population +(1|Tick_ID) + (1|Trial),
+  family = tweedie(link = "log"),
+  data = data
+)
+
+summary(model_total_room)
+#aic: 2455.2
+
+```
+
+```{r}
+# Create interaction column if not already present
+data$Pop_Room <- paste(data$Population, data$Room, sep = "\n")
+
+# Plot
+library(ggplot2)
+library(ggsignif)
+
+library(ggplot2)
+library(ggsignif)
+
+b1 <- ggplot(data, aes(x = Population, y = total_dist_cm, fill = Room)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  facet_wrap(~Room)+
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 3, color = "black",
+               position = position_dodge(0.75)) +
+  geom_signif(
+    comparisons = list(c("U", "D")),
+    annotations = "p = 1.9e-08 ***",  # From your model's RoomU effect
+    y_position = max(data$total_dist_cm, na.rm = TRUE) * 0.95,
+    tip_length = 0.02,
+    textsize = 4,
+    map_signif_level = FALSE
+  ) +
+  scale_fill_manual(
+    values = c("U" = "#90CAF9", "D" = "#B39DDB")
+  ) +
+  labs(
+    x = "Room",
+    y = "Total Distance (cm)",
+    fill = "Room"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(face = "bold", size = 14),
+    legend.text = element_text(size = 12)
+  )
+
+
+```
+
+
+#all downstairs analysis
+```{r}
+#total distance
+#this model was better and had a lower AIC score, with the pop * engor.. NAs for the pop socal:engorg3 group too
+model_total_d<- glmmTMB(
+  total_dist_cm ~ Population + Engorgement + (1|Tick_ID) + (1|Trial),
+  family = tweedie(link = "log"),
+  data = data_d
+)
+summary(model_total_d)
+
+```
+
+```{r}
+#horizontal distance (d)
+#same issue as total distance travel with the NA for pop socal:engorgement 3 and this model aslo had a lower AIC
+model_hor_d <- glmmTMB(
+  horizontal_dist_cm ~ Population + Engorgement + (1|Tick_ID) + (1|Trial),
+  family = tweedie(link = "log"),
+  data = data_d
+)
+
+summary(model_hor_d)
+```
+```{r}
+#note: this simple model didn't create weird and extreme values for stand error compared to the interactive pop * engorgement model, so went with his one instead
+
+model_vert_d <- glmmTMB(
+  vertical_dist_gross_cm ~ Population + Engorgement + (1|Tick_ID) + (1|Trial),
+  family = tweedie(link = "log"),
+  data = data_d
+)
+
+summary(model_vert_d)
+```
+
+```{r}
+##percent activity (d)
+#best fit for the dat compared to the pop * engorge model
+model_per_d <- glmmTMB(percent_activity ~ Population + Engorgement + (1|Trial) + (1|Tick_ID), 
+                   ziformula = ~1,  # Zero-inflated part of the model
+                   data = data_d, family = nbinom2)
+summary(model_per_d)
+
+#aic: 1615.9
+```
+
+
+#graph downstairs
+```{r}
+p1 <- ggplot(data_d, aes(x = as.factor(Room), y = total_dist_cm, fill = Population)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +
+  geom_signif(
+    comparisons = list(c("D", "D")),
+    annotations = "p = 0.056",
+    y_position = max(data$total_dist_cm, na.rm = TRUE) * 0.8,
+    tip_length = 0.08,
+    textsize = 4
+  ) +
+  labs(
+    title = "",
+    x = "Room",
+    y = "Gross Total Distance (cm)",
+    fill = "Population"
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Northern California" = "#90CAF9",
+      "Southern California" = "#B39DDB"
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(face = "bold"),
+    legend.text = element_text(size = 12)
+  )
+
+
+p2 <- ggplot(data_d, aes(x = Pop_Engorgement, y = total_dist_cm, fill = as.factor(Engorgement))) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black") +
+  labs(
+    title = "",
+    x = "Population and Engorgement",
+    y = "Total Distance (cm)",
+    fill = "Engorgement Level"
+  ) +
+  scale_fill_manual(
+    values = c("1" = "#a6cee3", "2" = "#1f78b4", "3" = "#073e85ff"),
+    labels = c("1" = "Unfed", "2" = "Partially Engorged", "3" = "Fully Engorged")
+  ) +
+  theme_minimal() +
+  geom_signif(
+    comparisons = list(
+      c("Northern California\n2", "Southern California\n2"),
+      c("Northern California\n3", "Southern California\n3")
+    ),
+    annotations = c("p=0.539", "p=0.663"),
+    y_position = c(25,35),
+    tip_length = 0.02,
+    textsize = 3.5,
+    map_signif_level = FALSE
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(face = "bold"),
+    legend.text = element_text(size = 12)
+  )
+
+#horizontal distance
+p3 <- ggplot(data_d, aes(x = as.factor(Room), y = horizontal_dist_cm, fill = Population)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  #facet_wrap(~Room)+
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +  # Adds mean points
+  labs(
+    title = "",
+    x = "Room",
+    y = "Horizontal Distance (cm)",
+    fill = "Population") +
+  theme_minimal()+ 
+  geom_signif(
+    comparisons = list(c("D", "D")),
+    annotations = "p = 0.050",  # Display p-value
+    y_position = max(data$horizontal_dist_cm) * 0.8,  # Position the bracket and p-value above the data
+    tip_length = 0.08,  # Add a small tip length for the bracket
+    textsize = 4 # Adjust text size for p-value+
+    # Adjust text size for p-value
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Northern California" = "#90CAF9",  # Soft Blue
+      "Southern California" = "#B39DDB"   # Light Purple
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(face = "bold"),
+    legend.text = element_text(size = 12)
+  )
+
+p4 <- ggplot(data_d, aes(x = Pop_Engorgement, y = horizontal_dist_cm, fill = as.factor(Engorgement))) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black") +
+  labs(
+    title = "",
+    x = "Population",
+    y = "Horizontal Distance (cm)",
+    fill = "Engorgement Level"
+  ) +
+  scale_fill_manual(
+    values = c("1" = "#a6cee3", "2" = "#1f78b4", "3" = "#b2df8a"),
+    labels = c("1" = "Unfed", "2" = "Partially Engorged", "3" = "Fully Engorged")
+  ) +
+  geom_signif(
+    comparisons = list(
+      c("Northern California\n2", "Southern California\n2"),
+      c("Northern California\n3", "Southern California\n3")
+    ),
+    annotations = c("p=0.553", "p=0.701"),
+    y_position = c(25, 30),
+    tip_length = 0.02,
+    textsize = 3.5,
+    map_signif_level = FALSE
+  ) +
+  # Add population labels below x-axis
+  annotate("text", x = 2, y = -5, label = "Northern California", size = 4.5, fontface = "bold") +
+  annotate("text", x = 5, y = -5, label = "Southern California", size = 4.5, fontface = "bold") +
+  # Final theme settings
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(face = "bold"),
+    legend.text = element_text(size = 12)
+  )
+
+#vertical distance
+p5 <- ggplot(data_d, aes(x = as.factor(Room), y = vertical_dist_gross_cm, fill = Population)) + coord_cartesian(ylim = c(0, 1)) +
+
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +
+  geom_signif(
+    comparisons = list(c("D", "D")),
+    annotations = "p = 0.609",
+    y_position = max(data$total_dist_cm, na.rm = TRUE) * 0.01,
+    tip_length = 0.03,
+    textsize = 4
+  ) +
+  labs(
+    title = "",
+    x = "Room",
+    y = "Vertical gross distance (cm)",
+    fill = "Population"
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Northern California" = "#90CAF9",
+      "Southern California" = "#B39DDB"
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(face = "bold"),
+    legend.text = element_text(size = 12)
+  )
+
+
+p6 <- ggplot(data_d, aes(x = Pop_Engorgement, y = vertical_dist_gross_cm, fill = as.factor(Engorgement))) + coord_cartesian(ylim = c(0, 1)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black") +
+  labs(
+    title = "",
+    x = "Population and Engorgement",
+    y = "Vertical gross distance (cm)",
+    fill = "Engorgement Level"
+  ) +
+  scale_fill_manual(
+    values = c("1" = "#a6cee3", "2" = "#1f78b4", "3" = "#b2df8a"),
+    labels = c("1" = "Unfed", "2" = "Partially Engorged", "3" = "Fully Engorged")
+  ) +
+  theme_minimal() +
+  geom_signif(
+    comparisons = list(
+      c("Northern California\n2", "Southern California\n2"),
+      c("Northern California\n3", "Southern California\n3")
+    ),
+    annotations = c("p=0.769", "p=0.602"),
+    y_position = c(0.4,0.6),
+    tip_length = 0.02,
+    textsize = 3.5,
+    map_signif_level = FALSE
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(face = "bold"),
+    legend.text = element_text(size = 12)
+  )
+
+#percent_actvitiy
+p7 <- ggplot(data_d, aes(x = as.factor(Room), y = percent_activity, fill = Population)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  #facet_wrap(~Room)+
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +  # Adds mean points
+  labs(
+    title = "",
+    x = "Room",
+    y = "Percent activity (%)",
+    fill = "Population") +
+  theme_minimal()+ 
+  geom_signif(
+    comparisons = list(c("D", "D")),
+    annotations = "p = 0.515",  # Display p-value
+    y_position = max(data$percent_activity) * 1.0,  # Position the bracket and p-value above the data
+    tip_length = 0.08,  # Add a small tip length for the bracket
+    textsize = 4 # Adjust text size for p-value+
+    # Adjust text size for p-value
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Northern California" = "#90CAF9",  # Soft Blue
+      "Southern California" = "#B39DDB"   # Light Purple
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(face = "bold"),
+    legend.text = element_text(size = 12)
+  )
+
+p8 <- ggplot(data_d, aes(x = Pop_Engorgement, y = percent_activity, fill = as.factor(Engorgement))) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black") +
+  labs(
+    title = "",
+    x = "Population",
+    y = "Percent activity (%)",
+    fill = "Engorgement Level"
+  ) +
+  scale_fill_manual(
+    values = c("1" = "#a6cee3", "2" = "#1f78b4", "3" = "#b2df8a"),
+    labels = c("1" = "Unfed", "2" = "Partially Engorged", "3" = "Fully Engorged")
+  ) +
+  geom_signif(
+    comparisons = list(
+      c("Northern California\n2", "Southern California\n2"),
+      c("Northern California\n3", "Southern California\n3")
+    ),
+    annotations = c("p=0.253", "p=0.934"),
+    y_position = c(25, 30),
+    tip_length = 0.02,
+    textsize = 3.5,
+    map_signif_level = FALSE
+  ) +
+  # Add population labels below x-axis
+  annotate("text", x = 2, y = -5, label = "Northern California", size = 4.5, fontface = "bold") +
+  annotate("text", x = 5, y = -5, label = "Southern California", size = 4.5, fontface = "bold") +
+  # Final theme settings
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 14),
+    legend.title = element_text(face = "bold"),
+    legend.text = element_text(size = 12)
+  )
+```
+
+
+
+
+```{r}
+#making a panel
+data_d$Pop_Engorgement <- paste(data_d$Population, data_d$Engorgement, sep = "\n")
+data_d$Pop_Engorgement <- gsub("Northern California", "NC", data_d$Pop_Engorgement)
+data_d$Pop_Engorgement <- gsub("Southern California", "SC", data_d$Pop_Engorgement)
+
+common_theme <- theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    
+    # Axis text sizing + rotation
+    axis.text.x = element_text(angle = 70, hjust = 1, size = 6.5),
+    axis.text.y = element_text(size = 10),
+    
+    # Axis title size
+    axis.title.x = element_text(size = 12, face = "bold"),
+    axis.title.y = element_text(size = 11, face = "bold"),
+    
+    # Plot title and legend
+    plot.title = element_text(size = 16, face = "bold", hjust = 0),
+    plot.title.position = "plot",
+    
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 10)
+  )
+
+common_theme <- theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(angle = 70, hjust = 1, size = 6.5),
+    axis.text.y = element_text(size = 10),
+    axis.title = element_text(size = 13, face = "bold"),
+    plot.title = element_text(size = 16, face = "bold", hjust = 0),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 10),
+    plot.title.position = "plot"
+  )
+
+
+
+# Shared engorgement fill scale
+eng_fill <- scale_fill_manual(
+  values = c("1" = "#a6cee3", "2" = "#1f78b4", "3" = "#b2df8a"),
+  labels = c("1" = "Unfed", "2" = "Partially Engorged", "3" = "Fully Engorged")
+)
+
+# p1: Total Distance ~ Room
+p1 <- ggplot(data_d, aes(x = as.factor(Room), y = total_dist_cm, fill = Population)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +
+  geom_signif(
+    comparisons = list(c("D", "D")),
+    annotations = "p = 0.056",
+    y_position = max(data_d$total_dist_cm, na.rm = TRUE) * 0.8,
+    tip_length = 0.08,
+    textsize = 4
+  ) +
+  scale_fill_manual(values = c("Northern California" = "#90CAF9", "Southern California" = "#B39DDB")) +
+  labs(x = "Room", y = "Total Distance (cm)", fill = "Population") +
+  common_theme +
+  theme(legend.position = "none")
+
+# p2: Total Distance ~ Population + Engorgement
+p2 <- ggplot(data_d, aes(x = Pop_Engorgement, y = total_dist_cm, fill = as.factor(Engorgement))) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black") +
+  geom_signif(
+    comparisons = list(
+      c("Northern California\n2", "Southern California\n2"),
+      c("Northern California\n3", "Southern California\n3")
+    ),
+    annotations = c("p=0.539", "p=0.663"),
+    y_position = c(25, 35),
+    tip_length = 0.02,
+    textsize = 3.5,
+    map_signif_level = FALSE
+  ) +
+  labs(x = "Population and Engorgement", y = "Total Distance (cm)", fill = "Engorgement Level") +
+  eng_fill + common_theme +
+  theme(legend.position = "none")
+
+# p3: Horizontal Distance ~ Room
+p3 <- ggplot(data_d, aes(x = as.factor(Room), y = horizontal_dist_cm, fill = Population)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +
+  geom_signif(
+    comparisons = list(c("D", "D")),
+    annotations = "p = 0.050",
+    y_position = max(data_d$horizontal_dist_cm, na.rm = TRUE) * 0.8,
+    tip_length = 0.08,
+    textsize = 4
+  ) +
+  scale_fill_manual(values = c("Northern California" = "#90CAF9", "Southern California" = "#B39DDB")) +
+  labs(x = "Room", y = "Horizontal Distance (cm)", fill = "Population") +
+  common_theme +
+  theme(legend.position = "none")
+
+# p4: Horizontal Distance ~ Population + Engorgement
+p4 <- ggplot(data_d, aes(x = Pop_Engorgement, y = horizontal_dist_cm, fill = as.factor(Engorgement))) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black") +
+  geom_signif(
+    comparisons = list(
+      c("Northern California\n2", "Southern California\n2"),
+      c("Northern California\n3", "Southern California\n3")
+    ),
+    annotations = c("p=0.553", "p=0.701"),
+    y_position = c(25, 30),
+    tip_length = 0.02,
+    textsize = 3.5,
+    map_signif_level = FALSE
+  ) +
+  annotate("text", x = 2, y = -5, label = "Northern California", size = 4.5, fontface = "bold") +
+  annotate("text", x = 5, y = -5, label = "Southern California", size = 4.5, fontface = "bold") +
+  labs(x = "Population", y = "Horizontal Distance (cm)", fill = "Engorgement Level") +
+  eng_fill + common_theme +
+  theme(legend.position = "none")
+
+# p5: Vertical Distance ~ Room
+p5 <- ggplot(data_d, aes(x = as.factor(Room), y = vertical_dist_gross_cm, fill = Population)) +
+  coord_cartesian(ylim = c(0, 1)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +
+  geom_signif(
+    comparisons = list(c("D", "D")),
+    annotations = "p = 0.609",
+    y_position = 0.9,
+    tip_length = 0.03,
+    textsize = 4
+  ) +
+  labs(x = "Room", y = "Vertical Gross Distance (cm)", fill = "Population") +
+  scale_fill_manual(values = c("Northern California" = "#90CAF9", "Southern California" = "#B39DDB")) +
+  common_theme +
+  theme(legend.position = "none")
+
+# p6: Vertical Distance ~ Population + Engorgement
+p6 <- ggplot(data_d, aes(x = Pop_Engorgement, y = vertical_dist_gross_cm, fill = as.factor(Engorgement))) +
+  coord_cartesian(ylim = c(0, 1)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black") +
+  geom_signif(
+    comparisons = list(
+      c("Northern California\n2", "Southern California\n2"),
+      c("Northern California\n3", "Southern California\n3")
+    ),
+    annotations = c("p=0.769", "p=0.602"),
+    y_position = c(0.4, 0.6),
+    tip_length = 0.02,
+    textsize = 3.5,
+    map_signif_level = FALSE
+  ) +
+  labs(x = "Population and Engorgement", y = "Vertical Gross Distance (cm)", fill = "Engorgement Level") +
+  eng_fill + common_theme +
+  theme(legend.position = "none")
+
+# p7: Percent Activity ~ Room
+p7 <- ggplot(data_d, aes(x = as.factor(Room), y = percent_activity, fill = Population)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6, position = position_dodge(0.75)) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black",
+               position = position_dodge(0.75)) +
+  geom_signif(
+    comparisons = list(c("D", "D")),
+    annotations = "p = 0.515",
+    y_position = max(data_d$percent_activity, na.rm = TRUE) * 0.9,
+    tip_length = 0.08,
+    textsize = 4
+  ) +
+  scale_fill_manual(values = c("Northern California" = "#90CAF9", "Southern California" = "#B39DDB")) +
+  labs(x = "Room", y = "Percent Activity (%)", fill = "Population") +
+  common_theme +
+  theme(legend.position = "none")
+
+# p8: Percent Activity ~ Population + Engorgement
+p8 <- ggplot(data_d, aes(x = Pop_Engorgement, y = percent_activity, fill = as.factor(Engorgement))) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black") +
+  geom_signif(
+    comparisons = list(
+      c("Northern California\n2", "Southern California\n2"),
+      c("Northern California\n3", "Southern California\n3")
+    ),
+    annotations = c("p=0.253", "p=0.934"),
+    y_position = c(25, 30),
+    tip_length = 0.02,
+    textsize = 3.5,
+    map_signif_level = FALSE
+  ) +
+  annotate("text", x = 2, y = -5, label = "Northern California", size = 4.5, fontface = "bold") +
+  annotate("text", x = 5, y = -5, label = "Southern California", size = 4.5, fontface = "bold") +
+  labs(x = "Population", y = "Percent Activity (%)", fill = "Engorgement Level") +
+  eng_fill + common_theme
+
+
+(p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8) +
+  plot_layout(ncol = 2, guides = "collect") +
+  plot_annotation(tag_levels = "a") &
+  theme(legend.position = "bottom") &
+#width = 14, height = 24, dpi = 600, units = "in")))
+
+ggsave("Panel_down.svg", width = 16, height = 18, dpi = 600)
+```
+```{r}
+p2 <- ggplot(data_d, aes(x = Pop_Engorgement, y = total_dist_cm, fill = as.factor(Engorgement))) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 2.5, color = "black") +
+  geom_signif(
+    comparisons = list(
+      c("NC\n2", "SC\n2"),
+      c("NC\n3", "SC\n3")
+    ),
+    annotations = c("p=0.539", "p=0.663"),
+    y_position = c(25, 35),
+    tip_length = 0.02,
+    textsize = 3.5,
+    map_signif_level = FALSE  # <- ensures it shows your text
+  ) +
+  coord_cartesian(ylim = c(0, 50)) +
+  labs(x = "Population and Engorgement", y = "Total Distance (cm)", fill = "Engorgement Level") +
+  eng_fill + common_theme
+
+p4 <- ggplot(data_d, aes(x = Pop_Engorgement, y = horizontal_dist_cm, fill = as.factor(Engorgement))) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 2.5, color = "black") +
+  geom_signif(
+    comparisons = list(
+      c("NC\n2", "SC\n2"),
+      c("NC\n3", "SC\n3")
+    ),
+    annotations = c("p=0.553", "p=0.701"),
+    y_position = c(25, 30),
+    tip_length = 0.02,
+    textsize = 3.5,
+    map_signif_level = FALSE
+  ) +
+  annotate("text", x = 2, y = -5, label = "NC", size = 4.5, fontface = "bold") +
+  annotate("text", x = 5, y = -5, label = "SC", size = 4.5, fontface = "bold") +
+  labs(x = "Population", y = "Horizontal Distance (cm)", fill = "Engorgement Level") +
+  eng_fill + common_theme
+
+p6 <- ggplot(data_d, aes(x = Pop_Engorgement, y = vertical_dist_gross_cm, fill = as.factor(Engorgement))) +
+  coord_cartesian(ylim = c(0, 1)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 2.5, color = "black") +
+  geom_signif(
+    comparisons = list(
+      c("NC\n2", "SC\n2"),
+      c("NC\n3", "SC\n3")
+    ),
+    annotations = c("p=0.769", "p=0.602"),
+    y_position = c(0.4, 0.6),
+    tip_length = 0.02,
+    textsize = 3.5,
+    map_signif_level = FALSE
+  ) +
+  labs(x = "Population and Engorgement", y = "Vertical Gross Distance (cm)", fill = "Engorgement Level") +
+  eng_fill + common_theme
+
+
+p8 <- ggplot(data_d, aes(x = Pop_Engorgement, y = percent_activity, fill = as.factor(Engorgement))) +
+  coord_cartesian(ylim = c(0, 120)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 2.5, color = "black") +
+  geom_signif(
+    comparisons = list(
+      c("NC\n2", "SC\n2"),
+      c("NC\n3", "SC\n3")
+    ),
+    annotations = c("p=0.253", "p=0.934"),
+    y_position = c(100, 115),
+    tip_length = 0.02,
+    textsize = 3.5,
+    map_signif_level = FALSE
+  ) +
+  annotate("text", x = 2, y = -5, label = "NC", size = 4.5, fontface = "bold") +
+  annotate("text", x = 5, y = -5, label = "SC", size = 4.5, fontface = "bold") +
+  labs(x = "Population", y = "Percent Activity (%)", fill = "Engorgement Level") +
+  eng_fill + common_theme
+
+
+(p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8) +
+  plot_layout(ncol = 2, guides = "collect") +
+  plot_annotation(tag_levels = "a") &
+  theme(legend.position = "bottom")
+
+```
+```{r}
+#southern California only to see if any behavioral differences when looking into one population at a time
+
+model_total_s<- glmmTMB(
+  total_dist_cm ~ Room + (1|Tick_ID) + (1|Trial),
+  family = tweedie(link = "log"),
+  data = data_s
+)
+
+summary(model_total_s)
+
+model_hor_s<- glmmTMB(
+  horizontal_dist_cm ~ Room + (1|Tick_ID) + (1|Trial),
+  family = tweedie(link = "log"),
+  data = data_s
+)
+
+summary(model_hor_s)
+
+
+model_vert_s<- glmmTMB(
+  vertical_dist_gross_cm ~ Room + (1|Tick_ID) + (1|Trial),
+  family = tweedie(link = "log"),
+  data = data_s
+)
+
+summary(model_vert_s)
+
+model_perc_s<- glmmTMB(
+  percent_activity ~ Room + (1|Tick_ID) + (1|Trial),
+  family = nbinom2(),
+  data = data_s
+)
+
+summary(model_perc_s)
+
+#ran for socal and no significant difference for all metrics
+
+model_total_n<- glmmTMB(
+  vertical_dist_gross_cm ~ Room + (1|Tick_ID) + (1|Trial),
+  family = tweedie(link = "log"),
+  data = data_n
+)
+
+summary(model_total_n)
+
+```
+```{r}
+#northern california- looking into potential behavior differences for just northern california
+
+model_total_n<- glmmTMB(
+  total_dist_cm ~ Room + (1|Tick_ID) + (1|Trial),
+  family = tweedie(link = "log"),
+  data = data_n
+)
+
+summary(model_total_n)
+
+model_hor_n<- glmmTMB(
+  horizontal_dist_cm ~ Room + (1|Tick_ID) + (1|Trial),
+  family = tweedie(link = "log"),
+  data = data_s
+)
+
+summary(model_hor_n)
+
+
+model_vert_n<- glmmTMB(
+  vertical_dist_gross_cm ~ Room + (1|Tick_ID) + (1|Trial),
+  family = tweedie(link = "log"),
+  data = data_n
+)
+
+summary(model_vert_n)
+
+model_perc_n<- glmmTMB(
+  percent_activity ~ Room + (1|Tick_ID) + (1|Trial),
+  family = nbinom2(),
+  data = data_n
+)
+
+summary(model_perc_n)
+
+#ran for socal and no significant difference for all metrics
+
+```
+```{r}
+#gives all of our figures similar aspects
+common_theme <- theme_minimal(base_size = 16) +  # increase base font size
+  theme(
+    axis.title = element_text(face = "bold", size = 16),
+    axis.text = element_text(size = 14),  # increase axis tick label size
+    axis.text.x = element_text(angle = 0, hjust = 0.5),
+    legend.position = "none",
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+
+
+```
+
+```{r}
+room_colors <- c("RoomD" = "#a6cee3", "RoomU" = "#1f78b4")
+
+p_total <- ggplot(data_n, aes(x = Room, y = total_dist_cm, fill = Room)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", color = "black", size = 2) +
+  scale_fill_manual(values = room_colors) +
+  labs(title = "Total Distance", x = "Room", y = "cm") +
+  annotate("text", x = 1.5, y = max(data_n$total_dist_cm, na.rm = TRUE)*0.95, 
+           label = "p < 0.001 ***") +
+  common_theme
+
+p_hor <- ggplot(data_s, aes(x = Room, y = horizontal_dist_cm, fill = Room)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", color = "black", size = 2) +
+  scale_fill_manual(values = room_colors) +
+  labs(title = "Horizontal Distance", x = "Room", y = "cm") +
+  annotate("text", x = 1.5, y = max(data_s$horizontal_dist_cm, na.rm = TRUE)*0.95, 
+           label = "n.s.") +
+  common_theme
+
+p_vert <- ggplot(data_n, aes(x = Room, y = vertical_dist_gross_cm, fill = Room)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", color = "black", size = 2) +
+  scale_fill_manual(values = room_colors) +
+  labs(title = "Vertical Distance", x = "Room", y = "cm") +
+  annotate("text", x = 1.5, y = max(data_n$vertical_dist_gross_cm, na.rm = TRUE)*0.95, 
+           label = "p < 0.001 ***") +
+  common_theme
+
+p_perc <- ggplot(data_n, aes(x = Room, y = percent_activity, fill = Room)) +
+  geom_boxplot(outlier.shape = NA, width = 0.6) +
+  stat_summary(fun = mean, geom = "point", color = "black", size = 2) +
+  scale_fill_manual(values = room_colors) +
+  labs(title = "Percent Activity", x = "Room", y = "%") +
+  annotate("text", x = 1.5, y = max(data_n$percent_activity, na.rm = TRUE)*0.95, 
+           label = "p = 0.002 **") +
+  common_theme
+
+```
+
+```{r}
+#making a panel for the manuscript
+(p_total + p_hor) /
+(p_vert + p_perc) +
+  plot_layout(guides = "collect") +
+  plot_annotation(tag_levels = "a") &
+  theme(legend.position = "bottom")
+
+ggsave("Questing_Panel2.svg", width = 16, height = 18, dpi = 600)
+
+```
+
